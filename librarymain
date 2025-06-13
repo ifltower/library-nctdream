@@ -1,0 +1,135 @@
+import React, { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectItem } from '@/components/ui/select';
+import { useRouter } from 'next/router';
+import Image from 'next/image';
+
+const pairings = [
+  { name: 'MarkHyuck', tag: 'markhyuck' },
+  { name: 'JenoJaemin', tag: 'jenojaemin' },
+];
+
+const XAuLibrary = () => {
+  const [entries, setEntries] = useState([]);
+  const [form, setForm] = useState({
+    title: '',
+    author: '',
+    tags: '',
+    link: '',
+    notes: '',
+    isRead: false,
+    pairing: 'markhyuck',
+  });
+  const [filterTag, setFilterTag] = useState('');
+  const [selectedPairing, setSelectedPairing] = useState('markhyuck');
+  const router = useRouter();
+
+  useEffect(() => {
+    const stored = localStorage.getItem(`xau-entries-${selectedPairing}`);
+    if (stored) setEntries(JSON.parse(stored));
+  }, [selectedPairing]);
+
+  useEffect(() => {
+    localStorage.setItem(`xau-entries-${selectedPairing}`, JSON.stringify(entries));
+  }, [entries, selectedPairing]);
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newEntry = { ...form, tags: form.tags.split(',').map((tag) => tag.trim()) };
+    setEntries((prev) => [...prev, newEntry]);
+    setForm({ title: '', author: '', tags: '', link: '', notes: '', isRead: false, pairing: selectedPairing });
+  };
+
+  const toggleReadStatus = (index) => {
+    setEntries((prev) => {
+      const updated = [...prev];
+      updated[index].isRead = !updated[index].isRead;
+      return updated;
+    });
+  };
+
+  const uniqueTags = [...new Set(entries.flatMap((entry) => entry.tags))];
+
+  return (
+    <div className="bg-gradient-to-br from-green-900 to-black min-h-screen text-white font-sans">
+      <div className="p-6 max-w-6xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-5xl font-bold mb-2">🎧 X AU Spotify Library</h1>
+          <p className="text-green-300">Track your favorite X AUs like a playlist</p>
+        </header>
+
+        <section className="mb-6">
+          <Select value={selectedPairing} onValueChange={(value) => {
+            setSelectedPairing(value);
+            setForm((f) => ({ ...f, pairing: value }));
+          }}>
+            {pairings.map((pair) => (
+              <SelectItem key={pair.tag} value={pair.tag}>
+                {pair.name}
+              </SelectItem>
+            ))}
+          </Select>
+        </section>
+
+        <form onSubmit={handleSubmit} className="bg-gray-800 p-4 rounded-lg space-y-4">
+          <Input name="title" placeholder="AU Title 🎵" value={form.title} onChange={handleChange} className="bg-black text-white border-green-500" />
+          <Input name="author" placeholder="Author 🧑‍🎤" value={form.author} onChange={handleChange} className="bg-black text-white border-green-500" />
+          <Input name="tags" placeholder="Tags (comma-separated)" value={form.tags} onChange={handleChange} className="bg-black text-white border-green-500" />
+          <Input name="link" placeholder="Link 🔗" value={form.link} onChange={handleChange} className="bg-black text-white border-green-500" />
+          <Textarea name="notes" placeholder="Notes 📝" value={form.notes} onChange={handleChange} className="bg-black text-white border-green-500" />
+          <label className="flex items-center space-x-2">
+            <input type="checkbox" name="isRead" checked={form.isRead} onChange={handleChange} className="accent-green-500" />
+            <span>Mark as Read</span>
+          </label>
+          <Button type="submit" className="bg-green-500 text-black font-bold hover:bg-green-400">+ Add AU</Button>
+        </form>
+
+        <section className="my-6">
+          <h2 className="text-xl font-semibold mb-2">Filter by Tag:</h2>
+          <div className="flex flex-wrap gap-2">
+            <Badge onClick={() => setFilterTag('')} className={`cursor-pointer ${filterTag === '' ? 'bg-green-600' : 'bg-green-900'}`}>All</Badge>
+            {uniqueTags.map((tag) => (
+              <Badge key={tag} onClick={() => setFilterTag(tag)} className={`cursor-pointer ${filterTag === tag ? 'bg-green-600' : 'bg-green-900'}`}>{tag}</Badge>
+            ))}
+          </div>
+        </section>
+
+        <ScrollArea className="h-[500px] space-y-4">
+          {entries
+            .filter((entry) => entry.pairing === selectedPairing)
+            .filter((entry) => filterTag === '' || entry.tags.includes(filterTag))
+            .map((entry, index) => (
+              <div key={index} className="bg-gray-900 p-4 rounded-lg shadow-lg">
+                <h3 className="text-2xl font-bold">🎶 {entry.title}</h3>
+                <p className="text-sm text-green-300">by {entry.author}</p>
+                <a href={entry.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">View AU</a>
+                <p className="mt-2 text-white">{entry.notes}</p>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {entry.tags.map((tag, i) => (
+                    <Badge key={i} className="bg-green-700">{tag}</Badge>
+                  ))}
+                </div>
+                <Button onClick={() => toggleReadStatus(index)} className={`mt-2 ${entry.isRead ? 'bg-green-300 text-black' : 'bg-red-300 text-black'}`}>
+                  {entry.isRead ? '✔️ Mark as Unread' : '📌 Mark as Read'}
+                </Button>
+              </div>
+            ))}
+        </ScrollArea>
+      </div>
+    </div>
+  );
+};
+
+export default XAuLibrary;
