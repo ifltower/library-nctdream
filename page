@@ -1,0 +1,5 @@
+'use client';
+import XAuLibrary from './XAuLibrary';
+export default function Home() {
+  return <XAuLibrary />;
+}
